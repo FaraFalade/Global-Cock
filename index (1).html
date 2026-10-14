@@ -1,0 +1,771 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2D6A4F">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="WAT Clock">
+<title>WAT Clock</title>
+<style>
+:root{--green:#2D6A4F;--lime:#74C69D;--cream:#F8F4E3;--bg:#f0f4f1;--card:#fff;--text:#1a2e1f;--muted:#6b7c6f;--border:#d4e4d9;}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1a12;--card:#1a2e1f;--text:#e2f0e6;--muted:#7daa8a;--border:#2a4232;}}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);overflow:hidden}
+.app{display:flex;flex-direction:column;height:100vh;height:100dvh;max-width:640px;margin:0 auto}
+.hdr{background:var(--green);color:#fff;padding:calc(env(safe-area-inset-top,0px) + 10px) 20px 12px;text-align:center;flex-shrink:0}
+.hdr-label{font-size:10px;letter-spacing:1.8px;text-transform:uppercase;opacity:.75;margin-bottom:3px}
+.hdr-time{font-size:30px;font-weight:800;letter-spacing:2px;font-variant-numeric:tabular-nums;line-height:1}
+.hdr-time .ap{font-size:14px;font-weight:700;letter-spacing:1px;opacity:.9;margin-left:4px;vertical-align:middle}
+.hdr-date{font-size:11px;opacity:.82;margin-top:3px}
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch}
+.panel{display:none;padding:14px;padding-bottom:calc(70px + env(safe-area-inset-bottom,0px) + 10px)}
+.panel.on{display:block}
+.tabs{display:flex;background:var(--card);border-top:1px solid var(--border);padding-bottom:env(safe-area-inset-bottom,0px);flex-shrink:0}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:10px 4px;border:none;background:none;cursor:pointer;color:var(--muted);font-size:10px;-webkit-tap-highlight-color:transparent;transition:color .15s}
+.tab.on{color:var(--green);font-weight:700}
+.tab .ic{font-size:21px}
+.card{background:var(--card);border-radius:14px;padding:15px;margin-bottom:11px;border:1px solid var(--border)}
+.card-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.2px;color:var(--muted);margin-bottom:12px}
+.big-wrap{text-align:center;padding:16px 0 6px}
+.big-time{font-size:56px;font-weight:900;letter-spacing:1px;color:var(--green);font-variant-numeric:tabular-nums;line-height:1}
+.big-time .ap{font-size:22px;font-weight:700;vertical-align:middle;margin-left:6px;opacity:.9}
+.big-date{font-size:13px;color:var(--muted);margin-top:8px}
+.qc-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.qc{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:11px}
+.qc-city{font-size:11px;color:var(--muted);margin-bottom:3px}
+.qc-time{font-size:19px;font-weight:700;font-variant-numeric:tabular-nums}
+.qc-tz{font-size:10px;color:var(--lime);font-weight:700;margin-top:2px}
+.search{width:100%;padding:11px 15px;border:1px solid var(--border);border-radius:12px;font-size:15px;background:var(--card);color:var(--text);outline:none;margin-bottom:13px}
+.search:focus{border-color:var(--lime)}
+.rh{font-size:10px;font-weight:800;letter-spacing:1.8px;text-transform:uppercase;color:var(--muted);padding:9px 3px 5px}
+.ci{display:flex;align-items:center;gap:11px;padding:10px 13px;background:var(--card);border:1px solid var(--border);border-radius:11px;margin-bottom:5px}
+.ci-flag{font-size:24px;width:32px;text-align:center;flex-shrink:0}
+.ci-info{flex:1;min-width:0}
+.ci-name{font-size:13px;font-weight:700}
+.ci-sub{font-size:10px;color:var(--muted);margin-top:1px}
+.ci-right{text-align:right;flex-shrink:0}
+.ci-time{font-size:16px;font-weight:700;font-variant-numeric:tabular-nums;color:var(--green);white-space:nowrap}
+.ci-date{font-size:10px;color:var(--muted);margin-top:1px}
+.conv-form{display:flex;flex-direction:column;gap:11px}
+select,input[type=date],input[type=time]{width:100%;padding:11px 13px;border:1px solid var(--border);border-radius:11px;font-size:14px;background:var(--card);color:var(--text);outline:none;-webkit-appearance:none;appearance:none}
+select:focus,input:focus{border-color:var(--lime)}
+.flabel{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:4px;display:block}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.conv-result{background:var(--green);color:#fff;border-radius:14px;padding:18px;text-align:center;margin-top:10px}
+.cr-label{font-size:10px;opacity:.8;letter-spacing:1.2px;text-transform:uppercase}
+.cr-time{font-size:46px;font-weight:900;letter-spacing:2px;font-variant-numeric:tabular-nums;line-height:1.1;margin:7px 0 4px}
+.cr-date{font-size:13px;opacity:.88}
+.cr-diff{display:inline-block;background:rgba(255,255,255,.15);border-radius:8px;padding:5px 12px;font-size:12px;margin-top:10px}
+.ev{background:var(--card);border:1px solid var(--border);border-left:4px solid var(--lime);border-radius:10px;padding:11px 13px;margin-bottom:8px}
+.ev-name{font-size:13px;font-weight:700;margin-bottom:4px}
+.ev-meta{font-size:11px;color:var(--muted);line-height:1.7}
+.ev-wat{color:var(--green);font-weight:700}
+.no-ev-msg{font-size:13px;color:var(--muted);text-align:center;padding:16px 0}
+.cal-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.cal-nav{background:var(--card);border:1px solid var(--border);border-radius:8px;padding:6px 14px;cursor:pointer;font-size:16px;color:var(--text)}
+.cal-month{font-size:17px;font-weight:800}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cd-lbl{text-align:center;font-size:9px;font-weight:800;color:var(--muted);padding:5px 0;text-transform:uppercase}
+.cd{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:9px;font-size:13px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+.cd.empty{cursor:default}
+.cd.today{background:var(--lime);color:#fff;font-weight:800}
+.cd.has-ev .dot{width:4px;height:4px;background:var(--green);border-radius:50%;position:absolute;bottom:3px}
+.cd.today .dot{background:#fff}
+.cd:not(.empty):not(.today):hover{background:var(--border)}
+.cal-evbox{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:13px;margin-top:13px}
+.cal-evtitle{font-size:13px;font-weight:700;margin-bottom:8px}
+.inst-bar{background:linear-gradient(135deg,var(--green),#1b5c3a);color:#fff;border-radius:13px;padding:13px 15px;display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:11px}
+.inst-bar p{font-size:12px;opacity:.92;line-height:1.4}
+.inst-btn{background:#fff;color:var(--green);border:none;border-radius:8px;padding:7px 13px;font-size:12px;font-weight:800;cursor:pointer;white-space:nowrap;flex-shrink:0}
+</style>
+</head>
+<body>
+<div class="app">
+<div class="hdr">
+  <div class="hdr-label">🇳🇬 Nigeria · West Africa Time (UTC+1)</div>
+  <div class="hdr-time" id="htime">12:00:00<span class="ap" id="hap">AM</span></div>
+  <div class="hdr-date" id="hdate">Loading…</div>
+</div>
+<div class="content">
+  <div id="p-ng" class="panel on">
+    <div id="inst-bar" class="inst-bar" style="display:none">
+      <p>📲 Add WAT Clock to your home screen for offline access</p>
+      <button class="inst-btn" id="inst-btn">Install</button>
+    </div>
+    <div class="card big-wrap">
+      <div class="big-time" id="big-time">12:00:00<span class="ap" id="big-ap">AM</span></div>
+      <div class="big-date" id="big-date">Loading…</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Quick World Clocks</div>
+      <div class="qc-grid" id="qc-grid"></div>
+    </div>
+  </div>
+  <div id="p-world" class="panel">
+    <input class="search" id="wsearch" placeholder="🔍  Search country, capital or timezone…" oninput="filterW(this.value)">
+    <div id="wlist"></div>
+  </div>
+  <div id="p-conv" class="panel">
+    <div class="card">
+      <div class="card-title">Convert Any Timezone → WAT</div>
+      <div class="conv-form">
+        <div><label class="flabel">Timezone Abbreviation</label>
+          <select id="ctz" onchange="doConv()"></select></div>
+        <div class="row2">
+          <div><label class="flabel">Date</label><input type="date" id="cdate" onchange="doConv()"></div>
+          <div><label class="flabel">Time</label><input type="time" id="ctime" onchange="doConv()"></div>
+        </div>
+      </div>
+      <div id="cres"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📬 Upcoming Events</div>
+      <div id="evlist"></div>
+    </div>
+  </div>
+  <div id="p-cal" class="panel">
+    <div class="card">
+      <div class="cal-hdr">
+        <button class="cal-nav" onclick="chMo(-1)">&#8249;</button>
+        <div class="cal-month" id="cal-title"></div>
+        <button class="cal-nav" onclick="chMo(1)">&#8250;</button>
+      </div>
+      <div class="cal-grid" id="cal-grid"></div>
+      <div id="cal-evbox" style="display:none" class="cal-evbox"></div>
+    </div>
+  </div>
+</div>
+<nav class="tabs">
+  <button class="tab on" onclick="showTab('ng',this)"><span class="ic">🇳🇬</span>Nigeria</button>
+  <button class="tab" onclick="showTab('world',this)"><span class="ic">🌍</span>World</button>
+  <button class="tab" onclick="showTab('conv',this)"><span class="ic">🔄</span>Convert</button>
+  <button class="tab" onclick="showTab('cal',this)"><span class="ic">📅</span>Calendar</button>
+</nav>
+</div>
+<script>
+// ==================== DATA ====================
+
+const COUNTRIES = [
+// ---- AFRICA (alphabetical) ----
+{f:'🇩🇿',n:'Algeria',cap:'Algiers',tz:'Africa/Algiers',ab:'CET',r:'Africa'},
+{f:'🇦🇴',n:'Angola',cap:'Luanda',tz:'Africa/Luanda',ab:'WAT',r:'Africa'},
+{f:'🇧🇯',n:'Benin',cap:'Porto-Novo',tz:'Africa/Porto-Novo',ab:'WAT',r:'Africa'},
+{f:'🇧🇼',n:'Botswana',cap:'Gaborone',tz:'Africa/Gaborone',ab:'CAT',r:'Africa'},
+{f:'🇧🇫',n:'Burkina Faso',cap:'Ouagadougou',tz:'Africa/Ouagadougou',ab:'GMT',r:'Africa'},
+{f:'🇧🇮',n:'Burundi',cap:'Gitega',tz:'Africa/Bujumbura',ab:'CAT',r:'Africa'},
+{f:'🇨🇲',n:'Cameroon',cap:'Yaound\u00e9',tz:'Africa/Douala',ab:'WAT',r:'Africa'},
+{f:'🇨🇻',n:'Cape Verde',cap:'Praia',tz:'Atlantic/Cape_Verde',ab:'CVT',r:'Africa'},
+{f:'🇨🇫',n:'Central African Rep.',cap:'Bangui',tz:'Africa/Bangui',ab:'WAT',r:'Africa'},
+{f:'🇹🇩',n:'Chad',cap:"N'Djamena",tz:'Africa/Ndjamena',ab:'WAT',r:'Africa'},
+{f:'🇰🇲',n:'Comoros',cap:'Moroni',tz:'Indian/Comoro',ab:'EAT',r:'Africa'},
+{f:'🇨🇩',n:'DR Congo',cap:'Kinshasa',tz:'Africa/Kinshasa',ab:'WAT',r:'Africa'},
+{f:'🇩🇯',n:'Djibouti',cap:'Djibouti',tz:'Africa/Djibouti',ab:'EAT',r:'Africa'},
+{f:'🇪🇬',n:'Egypt',cap:'Cairo',tz:'Africa/Cairo',ab:'EET',r:'Africa'},
+{f:'🇬🇶',n:'Equatorial Guinea',cap:'Malabo',tz:'Africa/Malabo',ab:'WAT',r:'Africa'},
+{f:'🇪🇷',n:'Eritrea',cap:'Asmara',tz:'Africa/Asmara',ab:'EAT',r:'Africa'},
+{f:'🇸🇿',n:'Eswatini',cap:'Mbabane',tz:'Africa/Mbabane',ab:'SAST',r:'Africa'},
+{f:'🇪🇹',n:'Ethiopia',cap:'Addis Ababa',tz:'Africa/Addis_Ababa',ab:'EAT',r:'Africa'},
+{f:'🇬🇦',n:'Gabon',cap:'Libreville',tz:'Africa/Libreville',ab:'WAT',r:'Africa'},
+{f:'🇬🇲',n:'Gambia',cap:'Banjul',tz:'Africa/Banjul',ab:'GMT',r:'Africa'},
+{f:'🇬🇭',n:'Ghana',cap:'Accra',tz:'Africa/Accra',ab:'GMT',r:'Africa'},
+{f:'🇬🇳',n:'Guinea',cap:'Conakry',tz:'Africa/Conakry',ab:'GMT',r:'Africa'},
+{f:'🇬🇼',n:'Guinea-Bissau',cap:'Bissau',tz:'Africa/Bissau',ab:'GMT',r:'Africa'},
+{f:'🇨🇮',n:'Ivory Coast',cap:'Yamoussoukro',tz:'Africa/Abidjan',ab:'GMT',r:'Africa'},
+{f:'🇰🇪',n:'Kenya',cap:'Nairobi',tz:'Africa/Nairobi',ab:'EAT',r:'Africa'},
+{f:'🇱🇸',n:'Lesotho',cap:'Maseru',tz:'Africa/Maseru',ab:'SAST',r:'Africa'},
+{f:'🇱🇷',n:'Liberia',cap:'Monrovia',tz:'Africa/Monrovia',ab:'GMT',r:'Africa'},
+{f:'🇱🇾',n:'Libya',cap:'Tripoli',tz:'Africa/Tripoli',ab:'EET',r:'Africa'},
+{f:'🇲🇬',n:'Madagascar',cap:'Antananarivo',tz:'Indian/Antananarivo',ab:'EAT',r:'Africa'},
+{f:'🇲🇼',n:'Malawi',cap:'Lilongwe',tz:'Africa/Blantyre',ab:'CAT',r:'Africa'},
+{f:'🇲🇱',n:'Mali',cap:'Bamako',tz:'Africa/Bamako',ab:'GMT',r:'Africa'},
+{f:'🇲🇷',n:'Mauritania',cap:'Nouakchott',tz:'Africa/Nouakchott',ab:'GMT',r:'Africa'},
+{f:'🇲🇺',n:'Mauritius',cap:'Port Louis',tz:'Indian/Mauritius',ab:'MUT',r:'Africa'},
+{f:'🇲🇦',n:'Morocco',cap:'Rabat',tz:'Africa/Casablanca',ab:'WET',r:'Africa'},
+{f:'🇲🇿',n:'Mozambique',cap:'Maputo',tz:'Africa/Maputo',ab:'CAT',r:'Africa'},
+{f:'🇳🇦',n:'Namibia',cap:'Windhoek',tz:'Africa/Windhoek',ab:'CAT',r:'Africa'},
+{f:'🇳🇪',n:'Niger',cap:'Niamey',tz:'Africa/Niamey',ab:'WAT',r:'Africa'},
+{f:'🇳🇬',n:'Nigeria',cap:'Abuja',tz:'Africa/Lagos',ab:'WAT',r:'Africa'},
+{f:'🇨🇬',n:'Republic of Congo',cap:'Brazzaville',tz:'Africa/Brazzaville',ab:'WAT',r:'Africa'},
+{f:'🇷🇼',n:'Rwanda',cap:'Kigali',tz:'Africa/Kigali',ab:'CAT',r:'Africa'},
+{f:'🇸🇹',n:'Sao Tome & Principe',cap:'S\u00e3o Tom\u00e9',tz:'Africa/Sao_Tome',ab:'GMT',r:'Africa'},
+{f:'🇸🇳',n:'Senegal',cap:'Dakar',tz:'Africa/Dakar',ab:'GMT',r:'Africa'},
+{f:'🇸🇨',n:'Seychelles',cap:'Victoria',tz:'Indian/Mahe',ab:'SCT',r:'Africa'},
+{f:'🇸🇱',n:'Sierra Leone',cap:'Freetown',tz:'Africa/Freetown',ab:'GMT',r:'Africa'},
+{f:'🇸🇴',n:'Somalia',cap:'Mogadishu',tz:'Africa/Mogadishu',ab:'EAT',r:'Africa'},
+{f:'🇿🇦',n:'South Africa',cap:'Pretoria',tz:'Africa/Johannesburg',ab:'SAST',r:'Africa'},
+{f:'🇸🇸',n:'South Sudan',cap:'Juba',tz:'Africa/Juba',ab:'EAT',r:'Africa'},
+{f:'🇸🇩',n:'Sudan',cap:'Khartoum',tz:'Africa/Khartoum',ab:'EAT',r:'Africa'},
+{f:'🇹🇿',n:'Tanzania',cap:'Dodoma',tz:'Africa/Dar_es_Salaam',ab:'EAT',r:'Africa'},
+{f:'🇹🇬',n:'Togo',cap:'Lom\u00e9',tz:'Africa/Lome',ab:'GMT',r:'Africa'},
+{f:'🇹🇳',n:'Tunisia',cap:'Tunis',tz:'Africa/Tunis',ab:'CET',r:'Africa'},
+{f:'🇺🇬',n:'Uganda',cap:'Kampala',tz:'Africa/Kampala',ab:'EAT',r:'Africa'},
+{f:'🇿🇲',n:'Zambia',cap:'Lusaka',tz:'Africa/Lusaka',ab:'CAT',r:'Africa'},
+{f:'🇿🇼',n:'Zimbabwe',cap:'Harare',tz:'Africa/Harare',ab:'CAT',r:'Africa'},
+// ---- AMERICAS (alphabetical) ----
+{f:'🇦🇷',n:'Argentina',cap:'Buenos Aires',tz:'America/Argentina/Buenos_Aires',ab:'ART',r:'Americas'},
+{f:'🇧🇧',n:'Barbados',cap:'Bridgetown',tz:'America/Barbados',ab:'AST',r:'Americas'},
+{f:'🇧🇿',n:'Belize',cap:'Belmopan',tz:'America/Belize',ab:'CST',r:'Americas'},
+{f:'🇧🇴',n:'Bolivia',cap:'Sucre',tz:'America/La_Paz',ab:'BOT',r:'Americas'},
+{f:'🇧🇷',n:'Brazil (Bras\u00edlia)',cap:'Bras\u00edlia',tz:'America/Sao_Paulo',ab:'BRT',r:'Americas'},
+{f:'🇧🇷',n:'Brazil (Manaus)',cap:'Manaus',tz:'America/Manaus',ab:'AMT',r:'Americas'},
+{f:'🇨🇦',n:'Canada (Atlantic)',cap:'Halifax',tz:'America/Halifax',ab:'AST',r:'Americas'},
+{f:'🇨🇦',n:'Canada (Eastern)',cap:'Ottawa',tz:'America/Toronto',ab:'EST',r:'Americas'},
+{f:'🇨🇦',n:'Canada (Pacific)',cap:'Victoria BC',tz:'America/Vancouver',ab:'PST',r:'Americas'},
+{f:'🇨🇱',n:'Chile',cap:'Santiago',tz:'America/Santiago',ab:'CLT',r:'Americas'},
+{f:'🇨🇴',n:'Colombia',cap:'Bogot\u00e1',tz:'America/Bogota',ab:'COT',r:'Americas'},
+{f:'🇨🇷',n:'Costa Rica',cap:'San Jos\u00e9',tz:'America/Costa_Rica',ab:'CST',r:'Americas'},
+{f:'🇨🇺',n:'Cuba',cap:'Havana',tz:'America/Havana',ab:'CST',r:'Americas'},
+{f:'🇩🇴',n:'Dominican Republic',cap:'Santo Domingo',tz:'America/Santo_Domingo',ab:'AST',r:'Americas'},
+{f:'🇪🇨',n:'Ecuador',cap:'Quito',tz:'America/Guayaquil',ab:'ECT',r:'Americas'},
+{f:'🇸🇻',n:'El Salvador',cap:'San Salvador',tz:'America/El_Salvador',ab:'CST',r:'Americas'},
+{f:'🇬🇹',n:'Guatemala',cap:'Guatemala City',tz:'America/Guatemala',ab:'CST',r:'Americas'},
+{f:'🇬🇾',n:'Guyana',cap:'Georgetown',tz:'America/Guyana',ab:'GYT',r:'Americas'},
+{f:'🇭🇹',n:'Haiti',cap:'Port-au-Prince',tz:'America/Port-au-Prince',ab:'EST',r:'Americas'},
+{f:'🇭🇳',n:'Honduras',cap:'Tegucigalpa',tz:'America/Tegucigalpa',ab:'CST',r:'Americas'},
+{f:'🇯🇲',n:'Jamaica',cap:'Kingston',tz:'America/Jamaica',ab:'EST',r:'Americas'},
+{f:'🇲🇽',n:'Mexico',cap:'Mexico City',tz:'America/Mexico_City',ab:'CST',r:'Americas'},
+{f:'🇳🇮',n:'Nicaragua',cap:'Managua',tz:'America/Managua',ab:'CST',r:'Americas'},
+{f:'🇵🇦',n:'Panama',cap:'Panama City',tz:'America/Panama',ab:'EST',r:'Americas'},
+{f:'🇵🇾',n:'Paraguay',cap:'Asunci\u00f3n',tz:'America/Asuncion',ab:'PYT',r:'Americas'},
+{f:'🇵🇪',n:'Peru',cap:'Lima',tz:'America/Lima',ab:'PET',r:'Americas'},
+{f:'🇸🇷',n:'Suriname',cap:'Paramaribo',tz:'America/Paramaribo',ab:'SRT',r:'Americas'},
+{f:'🇹🇹',n:'Trinidad & Tobago',cap:'Port of Spain',tz:'America/Port_of_Spain',ab:'AST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Alaska)',cap:'Juneau',tz:'America/Anchorage',ab:'AKST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Central)',cap:'Chicago',tz:'America/Chicago',ab:'CST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Eastern)',cap:'Washington D.C.',tz:'America/New_York',ab:'EST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Hawaii)',cap:'Honolulu',tz:'Pacific/Honolulu',ab:'HST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Mountain)',cap:'Denver',tz:'America/Denver',ab:'MST',r:'Americas'},
+{f:'🇺🇸',n:'USA (Pacific)',cap:'Los Angeles',tz:'America/Los_Angeles',ab:'PST',r:'Americas'},
+{f:'🇺🇾',n:'Uruguay',cap:'Montevideo',tz:'America/Montevideo',ab:'UYT',r:'Americas'},
+{f:'🇻🇪',n:'Venezuela',cap:'Caracas',tz:'America/Caracas',ab:'VET',r:'Americas'},
+// ---- ASIA (alphabetical) ----
+{f:'🇦🇫',n:'Afghanistan',cap:'Kabul',tz:'Asia/Kabul',ab:'AFT',r:'Asia'},
+{f:'🇦🇲',n:'Armenia',cap:'Yerevan',tz:'Asia/Yerevan',ab:'AMT',r:'Asia'},
+{f:'🇦🇿',n:'Azerbaijan',cap:'Baku',tz:'Asia/Baku',ab:'AZT',r:'Asia'},
+{f:'🇧🇭',n:'Bahrain',cap:'Manama',tz:'Asia/Bahrain',ab:'AST',r:'Asia'},
+{f:'🇧🇩',n:'Bangladesh',cap:'Dhaka',tz:'Asia/Dhaka',ab:'BDT',r:'Asia'},
+{f:'🇧🇳',n:'Brunei',cap:'Bandar Seri Begawan',tz:'Asia/Brunei',ab:'BNT',r:'Asia'},
+{f:'🇰🇭',n:'Cambodia',cap:'Phnom Penh',tz:'Asia/Phnom_Penh',ab:'ICT',r:'Asia'},
+{f:'🇨🇳',n:'China',cap:'Beijing',tz:'Asia/Shanghai',ab:'CST',r:'Asia'},
+{f:'🇹🇱',n:'East Timor',cap:'Dili',tz:'Asia/Dili',ab:'TLT',r:'Asia'},
+{f:'🇬🇪',n:'Georgia',cap:'Tbilisi',tz:'Asia/Tbilisi',ab:'GET',r:'Asia'},
+{f:'🇮🇳',n:'India',cap:'New Delhi',tz:'Asia/Kolkata',ab:'IST',r:'Asia'},
+{f:'🇮🇩',n:'Indonesia (Jakarta)',cap:'Jakarta',tz:'Asia/Jakarta',ab:'WIB',r:'Asia'},
+{f:'🇮🇷',n:'Iran',cap:'Tehran',tz:'Asia/Tehran',ab:'IRST',r:'Asia'},
+{f:'🇮🇶',n:'Iraq',cap:'Baghdad',tz:'Asia/Baghdad',ab:'AST',r:'Asia'},
+{f:'🇮🇱',n:'Israel',cap:'Jerusalem',tz:'Asia/Jerusalem',ab:'IST',r:'Asia'},
+{f:'🇯🇵',n:'Japan',cap:'Tokyo',tz:'Asia/Tokyo',ab:'JST',r:'Asia'},
+{f:'🇯🇴',n:'Jordan',cap:'Amman',tz:'Asia/Amman',ab:'EET',r:'Asia'},
+{f:'🇰🇿',n:'Kazakhstan',cap:'Astana',tz:'Asia/Almaty',ab:'ALMT',r:'Asia'},
+{f:'🇰🇵',n:'North Korea',cap:'Pyongyang',tz:'Asia/Pyongyang',ab:'KST',r:'Asia'},
+{f:'🇰🇷',n:'South Korea',cap:'Seoul',tz:'Asia/Seoul',ab:'KST',r:'Asia'},
+{f:'🇰🇼',n:'Kuwait',cap:'Kuwait City',tz:'Asia/Kuwait',ab:'AST',r:'Asia'},
+{f:'🇰🇬',n:'Kyrgyzstan',cap:'Bishkek',tz:'Asia/Bishkek',ab:'KGT',r:'Asia'},
+{f:'🇱🇦',n:'Laos',cap:'Vientiane',tz:'Asia/Vientiane',ab:'ICT',r:'Asia'},
+{f:'🇱🇧',n:'Lebanon',cap:'Beirut',tz:'Asia/Beirut',ab:'EET',r:'Asia'},
+{f:'🇲🇾',n:'Malaysia',cap:'Kuala Lumpur',tz:'Asia/Kuala_Lumpur',ab:'MYT',r:'Asia'},
+{f:'🇲🇳',n:'Mongolia',cap:'Ulaanbaatar',tz:'Asia/Ulaanbaatar',ab:'ULAT',r:'Asia'},
+{f:'🇲🇲',n:'Myanmar',cap:'Naypyidaw',tz:'Asia/Yangon',ab:'MMT',r:'Asia'},
+{f:'🇳🇵',n:'Nepal',cap:'Kathmandu',tz:'Asia/Kathmandu',ab:'NPT',r:'Asia'},
+{f:'🇴🇲',n:'Oman',cap:'Muscat',tz:'Asia/Muscat',ab:'GST',r:'Asia'},
+{f:'🇵🇰',n:'Pakistan',cap:'Islamabad',tz:'Asia/Karachi',ab:'PKT',r:'Asia'},
+{f:'🇵🇭',n:'Philippines',cap:'Manila',tz:'Asia/Manila',ab:'PHT',r:'Asia'},
+{f:'🇶🇦',n:'Qatar',cap:'Doha',tz:'Asia/Qatar',ab:'AST',r:'Asia'},
+{f:'🇷🇺',n:'Russia (Vladivostok)',cap:'Vladivostok',tz:'Asia/Vladivostok',ab:'+10',r:'Asia'},
+{f:'🇸🇦',n:'Saudi Arabia',cap:'Riyadh',tz:'Asia/Riyadh',ab:'AST',r:'Asia'},
+{f:'🇸🇬',n:'Singapore',cap:'Singapore',tz:'Asia/Singapore',ab:'SGT',r:'Asia'},
+{f:'🇱🇰',n:'Sri Lanka',cap:'Sri Jayawardenepura',tz:'Asia/Colombo',ab:'IST',r:'Asia'},
+{f:'🇸🇾',n:'Syria',cap:'Damascus',tz:'Asia/Damascus',ab:'EET',r:'Asia'},
+{f:'🇹🇯',n:'Tajikistan',cap:'Dushanbe',tz:'Asia/Dushanbe',ab:'TJT',r:'Asia'},
+{f:'🇹🇭',n:'Thailand',cap:'Bangkok',tz:'Asia/Bangkok',ab:'ICT',r:'Asia'},
+{f:'🇹🇷',n:'Turkey',cap:'Ankara',tz:'Europe/Istanbul',ab:'TRT',r:'Asia'},
+{f:'🇹🇲',n:'Turkmenistan',cap:'Ashgabat',tz:'Asia/Ashgabat',ab:'TMT',r:'Asia'},
+{f:'🇦🇪',n:'UAE',cap:'Abu Dhabi',tz:'Asia/Dubai',ab:'GST',r:'Asia'},
+{f:'🇺🇿',n:'Uzbekistan',cap:'Tashkent',tz:'Asia/Tashkent',ab:'UZT',r:'Asia'},
+{f:'🇻🇳',n:'Vietnam',cap:'Hanoi',tz:'Asia/Ho_Chi_Minh',ab:'ICT',r:'Asia'},
+{f:'🇾🇪',n:'Yemen',cap:"Sana'a",tz:'Asia/Aden',ab:'AST',r:'Asia'},
+// ---- EUROPE (alphabetical) ----
+{f:'🇦🇱',n:'Albania',cap:'Tirana',tz:'Europe/Tirane',ab:'CET',r:'Europe'},
+{f:'🇦🇩',n:'Andorra',cap:'Andorra la Vella',tz:'Europe/Andorra',ab:'CET',r:'Europe'},
+{f:'🇦🇹',n:'Austria',cap:'Vienna',tz:'Europe/Vienna',ab:'CET',r:'Europe'},
+{f:'🇧🇾',n:'Belarus',cap:'Minsk',tz:'Europe/Minsk',ab:'FET',r:'Europe'},
+{f:'🇧🇪',n:'Belgium',cap:'Brussels',tz:'Europe/Brussels',ab:'CET',r:'Europe'},
+{f:'🇧🇦',n:'Bosnia',cap:'Sarajevo',tz:'Europe/Sarajevo',ab:'CET',r:'Europe'},
+{f:'🇧🇬',n:'Bulgaria',cap:'Sofia',tz:'Europe/Sofia',ab:'EET',r:'Europe'},
+{f:'🇭🇷',n:'Croatia',cap:'Zagreb',tz:'Europe/Zagreb',ab:'CET',r:'Europe'},
+{f:'🇨🇾',n:'Cyprus',cap:'Nicosia',tz:'Asia/Nicosia',ab:'EET',r:'Europe'},
+{f:'🇨🇿',n:'Czech Republic',cap:'Prague',tz:'Europe/Prague',ab:'CET',r:'Europe'},
+{f:'🇩🇰',n:'Denmark',cap:'Copenhagen',tz:'Europe/Copenhagen',ab:'CET',r:'Europe'},
+{f:'🇪🇪',n:'Estonia',cap:'Tallinn',tz:'Europe/Tallinn',ab:'EET',r:'Europe'},
+{f:'🇫🇮',n:'Finland',cap:'Helsinki',tz:'Europe/Helsinki',ab:'EET',r:'Europe'},
+{f:'🇫🇷',n:'France',cap:'Paris',tz:'Europe/Paris',ab:'CET',r:'Europe'},
+{f:'🇩🇪',n:'Germany',cap:'Berlin',tz:'Europe/Berlin',ab:'CET',r:'Europe'},
+{f:'🇬🇷',n:'Greece',cap:'Athens',tz:'Europe/Athens',ab:'EET',r:'Europe'},
+{f:'🇭🇺',n:'Hungary',cap:'Budapest',tz:'Europe/Budapest',ab:'CET',r:'Europe'},
+{f:'🇮🇸',n:'Iceland',cap:'Reykjav\u00edk',tz:'Atlantic/Reykjavik',ab:'GMT',r:'Europe'},
+{f:'🇮🇪',n:'Ireland',cap:'Dublin',tz:'Europe/Dublin',ab:'GMT',r:'Europe'},
+{f:'🇮🇹',n:'Italy',cap:'Rome',tz:'Europe/Rome',ab:'CET',r:'Europe'},
+{f:'🇱🇻',n:'Latvia',cap:'Riga',tz:'Europe/Riga',ab:'EET',r:'Europe'},
+{f:'🇱🇮',n:'Liechtenstein',cap:'Vaduz',tz:'Europe/Vaduz',ab:'CET',r:'Europe'},
+{f:'🇱🇹',n:'Lithuania',cap:'Vilnius',tz:'Europe/Vilnius',ab:'EET',r:'Europe'},
+{f:'🇱🇺',n:'Luxembourg',cap:'Luxembourg City',tz:'Europe/Luxembourg',ab:'CET',r:'Europe'},
+{f:'🇲🇹',n:'Malta',cap:'Valletta',tz:'Europe/Malta',ab:'CET',r:'Europe'},
+{f:'🇲🇩',n:'Moldova',cap:'Chi\u015fin\u0103u',tz:'Europe/Chisinau',ab:'EET',r:'Europe'},
+{f:'🇲🇨',n:'Monaco',cap:'Monaco',tz:'Europe/Monaco',ab:'CET',r:'Europe'},
+{f:'🇲🇪',n:'Montenegro',cap:'Podgorica',tz:'Europe/Podgorica',ab:'CET',r:'Europe'},
+{f:'🇳🇱',n:'Netherlands',cap:'Amsterdam',tz:'Europe/Amsterdam',ab:'CET',r:'Europe'},
+{f:'🇲🇰',n:'North Macedonia',cap:'Skopje',tz:'Europe/Skopje',ab:'CET',r:'Europe'},
+{f:'🇳🇴',n:'Norway',cap:'Oslo',tz:'Europe/Oslo',ab:'CET',r:'Europe'},
+{f:'🇵🇱',n:'Poland',cap:'Warsaw',tz:'Europe/Warsaw',ab:'CET',r:'Europe'},
+{f:'🇵🇹',n:'Portugal',cap:'Lisbon',tz:'Europe/Lisbon',ab:'WET',r:'Europe'},
+{f:'🇷🇴',n:'Romania',cap:'Bucharest',tz:'Europe/Bucharest',ab:'EET',r:'Europe'},
+{f:'🇷🇺',n:'Russia (Moscow)',cap:'Moscow',tz:'Europe/Moscow',ab:'MSK',r:'Europe'},
+{f:'🇷🇸',n:'Serbia',cap:'Belgrade',tz:'Europe/Belgrade',ab:'CET',r:'Europe'},
+{f:'🇸🇰',n:'Slovakia',cap:'Bratislava',tz:'Europe/Bratislava',ab:'CET',r:'Europe'},
+{f:'🇸🇮',n:'Slovenia',cap:'Ljubljana',tz:'Europe/Ljubljana',ab:'CET',r:'Europe'},
+{f:'🇪🇸',n:'Spain',cap:'Madrid',tz:'Europe/Madrid',ab:'CET',r:'Europe'},
+{f:'🇸🇪',n:'Sweden',cap:'Stockholm',tz:'Europe/Stockholm',ab:'CET',r:'Europe'},
+{f:'🇨🇭',n:'Switzerland',cap:'Bern',tz:'Europe/Zurich',ab:'CET',r:'Europe'},
+{f:'🇺🇦',n:'Ukraine',cap:'Kyiv',tz:'Europe/Kyiv',ab:'EET',r:'Europe'},
+{f:'🇬🇧',n:'United Kingdom',cap:'London',tz:'Europe/London',ab:'GMT',r:'Europe'},
+// ---- OCEANIA (alphabetical) ----
+{f:'🇦🇺',n:'Australia (Darwin)',cap:'Darwin',tz:'Australia/Darwin',ab:'ACST',r:'Oceania'},
+{f:'🇦🇺',n:'Australia (Perth)',cap:'Perth',tz:'Australia/Perth',ab:'AWST',r:'Oceania'},
+{f:'🇦🇺',n:'Australia (Sydney)',cap:'Canberra',tz:'Australia/Sydney',ab:'AEST',r:'Oceania'},
+{f:'🇨🇰',n:'Cook Islands',cap:'Avarua',tz:'Pacific/Rarotonga',ab:'CKT',r:'Oceania'},
+{f:'🇫🇯',n:'Fiji',cap:'Suva',tz:'Pacific/Fiji',ab:'FJT',r:'Oceania'},
+{f:'🇰🇮',n:'Kiribati',cap:'South Tarawa',tz:'Pacific/Tarawa',ab:'GILT',r:'Oceania'},
+{f:'🇲🇭',n:'Marshall Islands',cap:'Majuro',tz:'Pacific/Majuro',ab:'MHT',r:'Oceania'},
+{f:'🇳🇷',n:'Nauru',cap:'Yaren',tz:'Pacific/Nauru',ab:'NRT',r:'Oceania'},
+{f:'🇳🇿',n:'New Zealand',cap:'Wellington',tz:'Pacific/Auckland',ab:'NZST',r:'Oceania'},
+{f:'🇵🇬',n:'Papua New Guinea',cap:'Port Moresby',tz:'Pacific/Port_Moresby',ab:'PGT',r:'Oceania'},
+{f:'🇼🇸',n:'Samoa',cap:'Apia',tz:'Pacific/Apia',ab:'WST',r:'Oceania'},
+{f:'🇸🇧',n:'Solomon Islands',cap:'Honiara',tz:'Pacific/Guadalcanal',ab:'SBT',r:'Oceania'},
+{f:'🇹🇴',n:'Tonga',cap:"Nuku'alofa",tz:'Pacific/Tongatapu',ab:'TOT',r:'Oceania'},
+{f:'🇹🇻',n:'Tuvalu',cap:'Funafuti',tz:'Pacific/Funafuti',ab:'TVT',r:'Oceania'},
+{f:'🇻🇺',n:'Vanuatu',cap:'Port Vila',tz:'Pacific/Efate',ab:'VUT',r:'Oceania'},
+];
+
+const QC = [
+  {city:'London',tz:'Europe/London',ab:'GMT/BST'},
+  {city:'New York',tz:'America/New_York',ab:'EST/EDT'},
+  {city:'Paris',tz:'Europe/Paris',ab:'CET/CEST'},
+  {city:'Nairobi',tz:'Africa/Nairobi',ab:'EAT'},
+  {city:'Johannesburg',tz:'Africa/Johannesburg',ab:'SAST'},
+  {city:'Dubai',tz:'Asia/Dubai',ab:'GST'},
+];
+
+// All timezone abbreviations sorted alphabetically
+const TZ_ABBRS = [
+  {ab:'ACDT',label:'Australian Central Daylight Time',off:10.5},
+  {ab:'ACST',label:'Australian Central Standard Time',off:9.5},
+  {ab:'ACWST',label:'Australian Central Western Standard Time',off:8.75},
+  {ab:'AEDT',label:'Australian Eastern Daylight Time',off:11},
+  {ab:'AEST',label:'Australian Eastern Standard Time',off:10},
+  {ab:'AFT',label:'Afghanistan Time',off:4.5},
+  {ab:'AKDT',label:'Alaska Daylight Time',off:-8},
+  {ab:'AKST',label:'Alaska Standard Time',off:-9},
+  {ab:'ALMT',label:'Alma-Ata Time / Kazakhstan',off:6},
+  {ab:'AMT',label:'Amazon Time (Brazil)',off:-4},
+  {ab:'ANAT',label:'Anadyr Time (Russia)',off:12},
+  {ab:'ART',label:'Argentina Time',off:-3},
+  {ab:'AST',label:'Arabia Standard Time (Middle East)',off:3},
+  {ab:'AST_ATL',label:'Atlantic Standard Time (Canada / Caribbean)',off:-4},
+  {ab:'AWST',label:'Australian Western Standard Time',off:8},
+  {ab:'AZT',label:'Azerbaijan Time',off:4},
+  {ab:'AZOT',label:'Azores Standard Time',off:-1},
+  {ab:'BDT',label:'Bangladesh Standard Time',off:6},
+  {ab:'BIT',label:'Baker Island Time',off:-12},
+  {ab:'BNT',label:'Brunei Darussalam Time',off:8},
+  {ab:'BOT',label:'Bolivia Time',off:-4},
+  {ab:'BRST',label:'Brasilia Summer Time',off:-2},
+  {ab:'BRT',label:'Brasilia Standard Time',off:-3},
+  {ab:'BST',label:'British Summer Time (UK)',off:1},
+  {ab:'BTT',label:'Bhutan Time',off:6},
+  {ab:'CAT',label:'Central Africa Time',off:2},
+  {ab:'CCT',label:'Cocos Islands Time',off:6.5},
+  {ab:'CDT',label:'Central Daylight Time (North America)',off:-5},
+  {ab:'CEST',label:'Central European Summer Time',off:2},
+  {ab:'CET',label:'Central European Time',off:1},
+  {ab:'CHADT',label:'Chatham Island Daylight Time',off:13.75},
+  {ab:'CHAST',label:'Chatham Island Standard Time',off:12.75},
+  {ab:'CHST',label:'Chamorro Standard Time (Guam)',off:10},
+  {ab:'CKT',label:'Cook Island Time',off:-10},
+  {ab:'CLT',label:'Chile Standard Time',off:-4},
+  {ab:'CLST',label:'Chile Summer Time',off:-3},
+  {ab:'COT',label:'Colombia Time',off:-5},
+  {ab:'CST',label:'Central Standard Time (North America)',off:-6},
+  {ab:'CST_CN',label:'China Standard Time',off:8},
+  {ab:'CVT',label:'Cape Verde Time',off:-1},
+  {ab:'CXT',label:'Christmas Island Time',off:7},
+  {ab:'EAT',label:'East Africa Time',off:3},
+  {ab:'ECT',label:'Ecuador Time',off:-5},
+  {ab:'EDT',label:'Eastern Daylight Time (North America)',off:-4},
+  {ab:'EEST',label:'Eastern European Summer Time',off:3},
+  {ab:'EET',label:'Eastern European Time',off:2},
+  {ab:'EST',label:'Eastern Standard Time (North America)',off:-5},
+  {ab:'FET',label:'Further-Eastern European Time (Belarus)',off:3},
+  {ab:'FJT',label:'Fiji Time',off:12},
+  {ab:'FNT',label:'Fernando de Noronha Time',off:-2},
+  {ab:'GAMT',label:'Gambier Island Time',off:-9},
+  {ab:'GET',label:'Georgia Standard Time',off:4},
+  {ab:'GFT',label:'French Guiana Time',off:-3},
+  {ab:'GILT',label:'Gilbert Islands Time (Kiribati)',off:12},
+  {ab:'GMT',label:'Greenwich Mean Time',off:0},
+  {ab:'GST',label:'Gulf Standard Time (UAE / Oman)',off:4},
+  {ab:'GYT',label:'Guyana Time',off:-4},
+  {ab:'HKT',label:'Hong Kong Time',off:8},
+  {ab:'HST',label:'Hawaii Standard Time',off:-10},
+  {ab:'ICT',label:'Indochina Time (Thailand / Vietnam)',off:7},
+  {ab:'IDT',label:'Israel Daylight Time',off:3},
+  {ab:'IRDT',label:'Iran Daylight Time',off:4.5},
+  {ab:'IRKT',label:'Irkutsk Time (Russia)',off:8},
+  {ab:'IRST',label:'Iran Standard Time',off:3.5},
+  {ab:'IST',label:'India Standard Time',off:5.5},
+  {ab:'IST_IL',label:'Israel Standard Time',off:2},
+  {ab:'IST_IE',label:'Irish Standard Time',off:1},
+  {ab:'JST',label:'Japan Standard Time',off:9},
+  {ab:'KGT',label:'Kyrgyzstan Time',off:6},
+  {ab:'KRAT',label:'Krasnoyarsk Time (Russia)',off:7},
+  {ab:'KST',label:'Korea Standard Time',off:9},
+  {ab:'LINT',label:'Line Islands Time (UTC+14)',off:14},
+  {ab:'MAGT',label:'Magadan Time (Russia)',off:12},
+  {ab:'MART',label:'Marquesas Islands Time',off:-9.5},
+  {ab:'MDT',label:'Mountain Daylight Time (North America)',off:-6},
+  {ab:'MHT',label:'Marshall Islands Time',off:12},
+  {ab:'MMT',label:'Myanmar Time',off:6.5},
+  {ab:'MSK',label:'Moscow Standard Time',off:3},
+  {ab:'MST',label:'Mountain Standard Time (North America)',off:-7},
+  {ab:'MUT',label:'Mauritius Time',off:4},
+  {ab:'MVT',label:'Maldives Time',off:5},
+  {ab:'MYT',label:'Malaysia Time',off:8},
+  {ab:'NCT',label:'New Caledonia Time',off:11},
+  {ab:'NDT',label:'Newfoundland Daylight Time',off:-2.5},
+  {ab:'NFT',label:'Norfolk Island Time',off:11},
+  {ab:'NPT',label:'Nepal Time',off:5.75},
+  {ab:'NST',label:'Newfoundland Standard Time',off:-3.5},
+  {ab:'NUT',label:'Niue Time',off:-11},
+  {ab:'NZDT',label:'New Zealand Daylight Time',off:13},
+  {ab:'NZST',label:'New Zealand Standard Time',off:12},
+  {ab:'OMST',label:'Omsk Time (Russia)',off:6},
+  {ab:'PDT',label:'Pacific Daylight Time (North America)',off:-7},
+  {ab:'PET',label:'Peru Time',off:-5},
+  {ab:'PETT',label:'Kamchatka Time (Russia)',off:12},
+  {ab:'PGT',label:'Papua New Guinea Time',off:10},
+  {ab:'PHT',label:'Philippine Time',off:8},
+  {ab:'PKT',label:'Pakistan Standard Time',off:5},
+  {ab:'PMST',label:'St. Pierre and Miquelon Standard Time',off:-3},
+  {ab:'PONT',label:'Pohnpei Standard Time (Micronesia)',off:11},
+  {ab:'PST',label:'Pacific Standard Time (North America)',off:-8},
+  {ab:'PST_PH',label:'Philippine Standard Time',off:8},
+  {ab:'PYT',label:'Paraguay Time',off:-4},
+  {ab:'RET',label:'Reunion Time',off:4},
+  {ab:'SAST',label:'South Africa Standard Time',off:2},
+  {ab:'SBT',label:'Solomon Islands Time',off:11},
+  {ab:'SCT',label:'Seychelles Time',off:4},
+  {ab:'SGT',label:'Singapore Time',off:8},
+  {ab:'SLST',label:'Sri Lanka Standard Time',off:5.5},
+  {ab:'SRT',label:'Suriname Time',off:-3},
+  {ab:'SST',label:'Samoa Standard Time',off:-11},
+  {ab:'TAHT',label:'Tahiti Time',off:-10},
+  {ab:'TJT',label:'Tajikistan Time',off:5},
+  {ab:'TLT',label:'Timor-Leste Time',off:9},
+  {ab:'TMT',label:'Turkmenistan Time',off:5},
+  {ab:'TOT',label:'Tonga Time',off:13},
+  {ab:'TRT',label:'Turkey Time',off:3},
+  {ab:'TVT',label:'Tuvalu Time',off:12},
+  {ab:'ULAT',label:'Ulaanbaatar Time (Mongolia)',off:8},
+  {ab:'UTC',label:'Coordinated Universal Time',off:0},
+  {ab:'UYT',label:'Uruguay Time',off:-3},
+  {ab:'UZT',label:'Uzbekistan Time',off:5},
+  {ab:'VET',label:'Venezuela Time',off:-4},
+  {ab:'VLAT',label:'Vladivostok Time (Russia)',off:10},
+  {ab:'VOST',label:'Vostok Station Time (Antarctica)',off:6},
+  {ab:'VUT',label:'Vanuatu Time',off:11},
+  {ab:'WAKT',label:'Wake Island Time',off:12},
+  {ab:'WAST',label:'West Africa Summer Time',off:2},
+  {ab:'WAT',label:'West Africa Time — Nigeria',off:1},
+  {ab:'WEST',label:'Western European Summer Time',off:1},
+  {ab:'WET',label:'Western European Time',off:0},
+  {ab:'WIB',label:'Western Indonesian Time (Jakarta)',off:7},
+  {ab:'WITA',label:'Central Indonesian Time',off:8},
+  {ab:'WIT',label:'Eastern Indonesian Time',off:9},
+  {ab:'WST',label:'West Samoa Time',off:13},
+  {ab:'WST_WA',label:'Western Australia Standard Time',off:8},
+  {ab:'YAKT',label:'Yakutsk Time (Russia)',off:9},
+  {ab:'YEKT',label:'Yekaterinburg Time (Russia)',off:5},
+];
+
+// Upcoming events only (future dates from today)
+const ALL_EVENTS = [
+  {name:"Meet Baobab's Opportunities Partners",date:'2026-10-16',orig:'3:00 PM GMT',wat:'4:00 PM WAT',org:'Baobab Platform'},
+  {name:'Future of Work in Africa Masterclass 1',date:'2026-10-22',orig:'4:00 PM GMT',wat:'5:00 PM WAT',org:'Baobab Platform'},
+  {name:'Green Digital Certificate Onboarding (INCO)',date:'2026-10-27',orig:'5:00 PM CET',wat:'5:00 PM WAT',org:'INCO Academy'},
+];
+
+// ==================== STATE ====================
+let calY, calM, deferredPWA = null;
+
+// ==================== HELPERS ====================
+function localParts(date, tz) {
+  return Object.fromEntries(
+    new Intl.DateTimeFormat('en-GB',{timeZone:tz,year:'numeric',month:'2-digit',day:'2-digit',
+      hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:false})
+    .formatToParts(date).map(({type,value})=>[type,value])
+  );
+}
+
+function to12(h24, mn, sc) {
+  const h = parseInt(h24), ap = h >= 12 ? 'PM' : 'AM', h12 = h % 12 || 12;
+  return {
+    hms: String(h12).padStart(2,'0') + ':' + mn + ':' + sc,
+    hm:  String(h12).padStart(2,'0') + ':' + mn,
+    ap
+  };
+}
+
+function getTime(tz) {
+  const now = new Date();
+  const p = localParts(now, tz);
+  const t = to12(p.hour, p.minute, p.second);
+  return {
+    hms: t.hms, hm: t.hm, ap: t.ap,
+    full: new Intl.DateTimeFormat('en-NG',{timeZone:tz,weekday:'long',year:'numeric',month:'long',day:'numeric'}).format(now),
+    short: new Intl.DateTimeFormat('en-NG',{timeZone:tz,month:'short',day:'numeric'}).format(now),
+  };
+}
+
+function offsetStr(tz) {
+  const now = new Date();
+  const p = localParts(now, tz);
+  const lh = parseInt(p.hour), lm = parseInt(p.minute);
+  const uh = now.getUTCHours(), um = now.getUTCMinutes();
+  let d = (lh*60+lm)-(uh*60+um);
+  if(d>720)d-=1440; if(d<-720)d+=1440;
+  const s = d>=0?'+':'-', a=Math.abs(d), wh=Math.floor(a/60), wm=a%60;
+  return 'UTC'+s+wh+(wm?':'+String(wm).padStart(2,'0'):'');
+}
+
+function fmtH(h) {
+  const a = Math.abs(h);
+  if(a === Math.floor(a)) return a+'h';
+  const wh = Math.floor(a), wm = Math.round((a-wh)*60);
+  return wh > 0 ? wh+'h '+wm+'m' : wm+'m';
+}
+
+// ==================== TABS ====================
+function showTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('on'));
+  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on'));
+  document.getElementById('p-'+id).classList.add('on');
+  btn.classList.add('on');
+}
+
+// ==================== LIVE CLOCKS ====================
+function tick() {
+  const t = getTime('Africa/Lagos');
+  document.getElementById('htime').firstChild.textContent = t.hms;
+  document.getElementById('hap').textContent = t.ap;
+  document.getElementById('big-time').firstChild.textContent = t.hms;
+  document.getElementById('big-ap').textContent = t.ap;
+  document.getElementById('hdate').textContent = t.full;
+  document.getElementById('big-date').textContent = t.full;
+
+  QC.forEach(c => {
+    const el = document.getElementById('qci-'+c.city.replace(/\s/g,'_'));
+    if(el) {
+      const qt = getTime(c.tz);
+      el.querySelector('.qc-time').textContent = qt.hm + ' ' + qt.ap;
+    }
+  });
+
+  COUNTRIES.forEach((_,i) => {
+    const el = document.getElementById('ci-'+i);
+    if(el) {
+      const ct = getTime(COUNTRIES[i].tz);
+      el.querySelector('.ci-time').textContent = ct.hm + ' ' + ct.ap;
+      el.querySelector('.ci-date').textContent = ct.short;
+    }
+  });
+}
+
+// ==================== WORLD CLOCK ====================
+function buildWorld(filter) {
+  const q = (filter||'').toLowerCase().trim();
+  const regions = ['Africa','Americas','Asia','Europe','Oceania'];
+  let html = '';
+  regions.forEach(r => {
+    let list = COUNTRIES
+      .filter((c,_) => c.r===r && (!q || c.n.toLowerCase().includes(q) || c.cap.toLowerCase().includes(q) || c.ab.toLowerCase().includes(q) || c.tz.toLowerCase().includes(q)))
+      .sort((a,b) => a.n.localeCompare(b.n));
+    if(!list.length) return;
+    html += '<div class="rh">'+r+'</div>';
+    list.forEach(c => {
+      const i = COUNTRIES.indexOf(c);
+      const ct = getTime(c.tz);
+      const off = offsetStr(c.tz);
+      html += '<div class="ci" id="ci-'+i+'">' +
+        '<div class="ci-flag">'+c.f+'</div>' +
+        '<div class="ci-info"><div class="ci-name">'+c.n+'</div>' +
+        '<div class="ci-sub">🏛 '+c.cap+' &nbsp;·&nbsp; '+c.ab+' &nbsp;·&nbsp; '+off+'</div></div>' +
+        '<div class="ci-right"><div class="ci-time">'+ct.hm+' '+ct.ap+'</div><div class="ci-date">'+ct.short+'</div></div>' +
+        '</div>';
+    });
+  });
+  document.getElementById('wlist').innerHTML = html || '<p style="color:var(--muted);padding:20px;text-align:center">No matches found</p>';
+}
+
+function filterW(v) { buildWorld(v); }
+
+// ==================== CONVERT ====================
+function buildConvDropdown() {
+  document.getElementById('ctz').innerHTML = TZ_ABBRS.map((t,i) => {
+    const s = t.off>=0?'+':'-', a=Math.abs(t.off), wh=Math.floor(a), wm=Math.round((a-wh)*60);
+    const offLabel = 'UTC'+s+wh+(wm?':'+String(wm).padStart(2,'0'):'');
+    return '<option value="'+i+'">'+t.ab+' — '+t.label+' ('+offLabel+')</option>';
+  }).join('');
+  // Default to CET (common for her events)
+  const cetIdx = TZ_ABBRS.findIndex(t=>t.ab==='CET');
+  if(cetIdx>=0) document.getElementById('ctz').value = cetIdx;
+}
+
+function doConv() {
+  const idx = parseInt(document.getElementById('ctz').value);
+  const tz = TZ_ABBRS[idx];
+  const dateVal = document.getElementById('cdate').value;
+  const timeVal = document.getElementById('ctime').value;
+  if(!dateVal||!timeVal) { document.getElementById('cres').innerHTML=''; return; }
+  try {
+    const [yr,mo,dy] = dateVal.split('-').map(Number);
+    const [hr,mn] = timeVal.split(':').map(Number);
+    // UTC = local_time - offset
+    const utcMs = Date.UTC(yr, mo-1, dy, hr, mn) - tz.off * 3600000;
+    const utcDate = new Date(utcMs);
+    const wp = localParts(utcDate, 'Africa/Lagos');
+    const wt = to12(wp.hour, wp.minute, wp.second);
+    const wDate = new Intl.DateTimeFormat('en-NG',{timeZone:'Africa/Lagos',weekday:'short',month:'long',day:'numeric',year:'numeric'}).format(utcDate);
+    const dh = 1 - tz.off;
+    let dLabel = Math.abs(dh)<0.01 ? 'Same timezone as WAT' :
+      dh>0 ? 'WAT is '+fmtH(Math.abs(dh))+' ahead of '+tz.ab :
+              'WAT is '+fmtH(Math.abs(dh))+' behind '+tz.ab;
+    document.getElementById('cres').innerHTML =
+      '<div class="conv-result">' +
+      '<div class="cr-label">🇳🇬 Nigeria · West Africa Time (UTC+1)</div>' +
+      '<div class="cr-time">'+wt.hm+' <span style="font-size:22px;font-weight:700;opacity:.9">'+wt.ap+'</span></div>' +
+      '<div class="cr-date">'+wDate+'</div>' +
+      '<div class="cr-diff">'+dLabel+'</div>' +
+      '</div>';
+  } catch(e) {
+    document.getElementById('cres').innerHTML = '<p style="color:red;padding:8px;font-size:13px">Conversion error — check your inputs.</p>';
+  }
+}
+
+function buildEvents() {
+  const today = new Date().toISOString().split('T')[0];
+  const upcoming = ALL_EVENTS.filter(e => e.date >= today);
+  if(!upcoming.length) {
+    document.getElementById('evlist').innerHTML = '<div class="no-ev-msg">No upcoming events at the moment.</div>';
+    return;
+  }
+  document.getElementById('evlist').innerHTML = upcoming.map(e =>
+    '<div class="ev">' +
+    '<div class="ev-name">'+e.name+'</div>' +
+    '<div class="ev-meta">📅 '+e.date+' &nbsp;·&nbsp; '+e.orig+' &rarr; <span class="ev-wat">'+e.wat+'</span></div>' +
+    '<div class="ev-meta">🏢 '+e.org+'</div>' +
+    '</div>'
+  ).join('');
+}
+
+// ==================== CALENDAR ====================
+const MNS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+
+function buildCal(y, m) {
+  calY=y; calM=m;
+  document.getElementById('cal-title').textContent = MNS[m]+' '+y;
+  const fd = new Date(y,m,1).getDay(), dim = new Date(y,m+1,0).getDate();
+  const now = new Date();
+  const evDates = new Set(ALL_EVENTS.map(e=>e.date));
+  let h='';
+  ['Su','Mo','Tu','We','Th','Fr','Sa'].forEach(d=>{h+='<div class="cd-lbl">'+d+'</div>';});
+  for(let i=0;i<fd;i++) h+='<div class="cd empty"></div>';
+  for(let d=1;d<=dim;d++) {
+    const ds=y+'-'+String(m+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    const isT=y===now.getFullYear()&&m===now.getMonth()&&d===now.getDate();
+    const hasE=evDates.has(ds);
+    h+='<div class="cd'+(isT?' today':'')+(hasE?' has-ev':'')+'" onclick="calDay(\'' +ds+ '\')">'+d+(hasE?'<span class="dot"></span>':'')+'</div>';
+  }
+  document.getElementById('cal-grid').innerHTML = h;
+  document.getElementById('cal-evbox').style.display = 'none';
+}
+
+function chMo(d) {
+  let m=calM+d, y=calY;
+  if(m>11){m=0;y++;} if(m<0){m=11;y--;}
+  buildCal(y,m);
+}
+
+function calDay(ds) {
+  const evs = ALL_EVENTS.filter(e=>e.date===ds);
+  const [yr,mo,dy] = ds.split('-');
+  const lbl = new Date(Number(yr),Number(mo)-1,Number(dy)).toLocaleDateString('en-NG',{weekday:'long',month:'long',day:'numeric'});
+  const box = document.getElementById('cal-evbox');
+  box.style.display = 'block';
+  box.innerHTML = '<div class="cal-evtitle">'+lbl+'</div>' + (evs.length ?
+    evs.map(e=>'<div style="padding:8px 0;border-bottom:1px solid var(--border)"><div style="font-size:13px;font-weight:700">'+e.name+'</div><div style="font-size:11px;color:var(--muted);margin-top:2px">'+e.orig+' &rarr; <span style="color:var(--green);font-weight:700">'+e.wat+'</span></div><div style="font-size:10px;color:var(--muted)">'+e.org+'</div></div>').join('') :
+    '<div style="font-size:12px;color:var(--muted)">No events this day.</div>');
+}
+
+// ==================== QUICK CLOCKS ====================
+function buildQC() {
+  document.getElementById('qc-grid').innerHTML = QC.map(c => {
+    const t = getTime(c.tz);
+    return '<div class="qc" id="qci-'+c.city.replace(/\s/g,'_')+'">'+
+      '<div class="qc-city">'+c.city+'</div>'+
+      '<div class="qc-time">'+t.hm+' '+t.ap+'</div>'+
+      '<div class="qc-tz">'+c.ab+'</div></div>';
+  }).join('');
+}
+
+// ==================== PWA ====================
+function setupPWA() {
+  const mf = {name:'WAT Clock',short_name:'WAT Clock',description:'Nigeria timezone clock & world time converter',start_url:'./',display:'standalone',background_color:'#2D6A4F',theme_color:'#2D6A4F',
+    icons:[{src:"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%232D6A4F' rx='18'/%3E%3Ctext y='80' x='5' font-size='85'%3E%F0%9F%87%B3%F0%9F%87%AC%3C/text%3E%3C/svg%3E",sizes:'512x512',type:'image/svg+xml'}]};
+  const ml = document.createElement('link'); ml.rel='manifest';
+  ml.href='data:application/manifest+json,'+encodeURIComponent(JSON.stringify(mf));
+  document.head.appendChild(ml);
+  if('serviceWorker' in navigator) {
+    const sw = `const C='wat-v3';
+self.addEventListener('install',e=>{e.waitUntil(caches.open(C).then(c=>c.addAll(['./']).catch(()=>{})).then(()=>self.skipWaiting()));});
+self.addEventListener('activate',e=>{e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));});
+self.addEventListener('fetch',e=>{e.respondWith(caches.match(e.request).then(r=>r||fetch(e.request).then(res=>{if(res.ok){const rc=res.clone();caches.open(C).then(c=>c.put(e.request,rc));}return res;})));});`;
+    navigator.serviceWorker.register(URL.createObjectURL(new Blob([sw],{type:'application/javascript'}))).catch(()=>{});
+  }
+  window.addEventListener('beforeinstallprompt',e=>{
+    e.preventDefault(); deferredPWA=e;
+    document.getElementById('inst-bar').style.display='flex';
+  });
+  document.getElementById('inst-btn').addEventListener('click',()=>{
+    if(deferredPWA){deferredPWA.prompt();deferredPWA.userChoice.then(()=>{deferredPWA=null;document.getElementById('inst-bar').style.display='none';});}
+  });
+}
+
+// ==================== INIT ====================
+window.addEventListener('DOMContentLoaded',()=>{
+  const now = new Date();
+  calY = now.getFullYear(); calM = now.getMonth();
+  document.getElementById('cdate').value = now.toISOString().split('T')[0];
+  document.getElementById('ctime').value = '14:00';
+  buildConvDropdown();
+  buildQC();
+  buildWorld('');
+  buildEvents();
+  buildCal(calY, calM);
+  tick();
+  setInterval(tick, 1000);
+  setupPWA();
+});
+</script>
+</body>
+</html>
